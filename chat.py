@@ -7,16 +7,15 @@ from langchain.prompts.chat import (
     AIMessage,
     HumanMessage,
 )
-
-import openai
-from pathlib import Path
 import argparse
+from utils import get_formatted_text
 
 
 def main(model: str = 'gpt-3.5-turbo'):
     LLM = ChatOpenAI(model_name=model, max_tokens=2000)
 
-    system_message_prompt = SystemMessage(content="I'm a helpful assistant. If the user has no further questions or the conversation has clearly ended I will expcitly return the phrase: ```Have a nice day!!!``` without any added text.")
+    system_message_prompt = SystemMessage(
+        content="I'm a helpful assistant. If the user has no further questions or the conversation has clearly ended I will expcitly return the phrase: ```Have a nice day!!!``` without any added text.")
 
     # what should the model do with your input
     conversation = [system_message_prompt]
@@ -54,13 +53,15 @@ def main(model: str = 'gpt-3.5-turbo'):
         chain = LLMChain(llm=LLM, prompt=chat_prompt, )
         output = chain.run(input_language="English")
 
+        print('\n', get_formatted_text(output))
+
         if output.lower().strip() == 'Have a nice day!!!'.lower():
             print('EXITING')
             break
 
         ai_message_prompt = AIMessage(content=output)
         conversation.append(ai_message_prompt)
-        print('\n', output)
+
 
 
 if __name__ == '__main__':
