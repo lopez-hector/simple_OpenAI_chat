@@ -63,7 +63,6 @@ def main(model: str = 'gpt-3.5-turbo'):
         conversation.append(ai_message_prompt)
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Open AI chat")
 
