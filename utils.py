@@ -3,6 +3,7 @@ from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
+from colorama import Fore, Back, Style
 
 
 def get_code_formatted(code, language):
@@ -29,7 +30,10 @@ def get_formatted_text(input):
     # assuming that code is always enclosed by ```
     for i in range(len(split_text)):
         if i > 0 and i % 2 == 1:
+            # find programming language by going to first newline character
             language = split_text[i][:split_text[i].find('\n')]
             split_text[i] = get_code_formatted(code=split_text[i], language=language)
+        else:
+            split_text[i] = f"{Fore.LIGHTGREEN_EX}{Back.BLACK}{split_text[i]}{Style.RESET_ALL}"
 
     return ''.join(split_text)
