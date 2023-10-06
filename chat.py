@@ -120,11 +120,9 @@ if __name__ == '__main__':
 
     acceptable_models = {'gpt-4', 'gpt-3.5-turbo'}
 
-    main_with_system_message = functools.partial(main, system_message=args.system_message)
-
     # Call the main function and pass the model_name argument
     if args.model_name and args.model_name in acceptable_models:
-        main_with_system_message(model=args.model_name)
+        main(model=args.model_name, system_message=args.system_message)
     else:
         print('defaulting to chat-gpt (gpt-3.5-turbo)')
-        main_with_system_message(model='gpt-3.5-turbo')
+        main(model='gpt-3.5-turbo', system_message=args.system_message)
