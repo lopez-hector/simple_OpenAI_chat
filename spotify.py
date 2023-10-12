@@ -62,7 +62,7 @@ return JSON
 
 SPOTIFY_PROMPT = f"""
 RETURN JSON
-I am a helpful agent that considers your music requests. I understand that you may have specific or broad music requests. I will do my best to distill your request into actionable CLI calls. If you need help picking i will help you find music you like. I will always return JSON with either a 'chat' or 'cli_call' key. I can also look up historical data to help you!
+I am a helpful agent that considers your music requests. I understand that you may have specific or broad music requests. I will do my best to distill your request into actionable CLI calls. If you need help picking i will help you find music you like. I will always return JSON with either a 'chat' or 'cli_call' key. I can also look up historical data to help you! Billboards data will be useful for this.
 RETURN JSON
 CLI_DOCUMENTATION:
 {cli_docs}
@@ -71,44 +71,68 @@ RETURN JSON
 
 
 def process_llm_output(llm_output):
+    """
+    The LLM response could be a direct response to the user (chat) or a need to execute a call.
+    Here we either continue the conversation or execute the desired call.
+
+    :param llm_output: Dict[str, str]. Keys should be 'chat' or 'cli_call'
+        direct output from the LLM in response to the conversation.
+    :return:
+        ai_message_prompt_: AI response to be shown to the user
+
+    """
+    # the LLM doesnt always output the right format when chatting, so we can catch that error here
     try:
         output_json = eval(llm_output)
     except:
         output_json = {'chat': llm_output}
 
+    chatting_state: bool = False  # True if chatting, false if executing a command
+
+    # if the LLM wants to chat, continue the conversation
     if 'chat' in output_json:
         # print('chat')
+        # Show LLMs chat response
         print(get_formatted_text(output_json['chat']).replace('\n', '\n\t'))
-        # update conversation history
         ai_message_prompt_ = AIMessage(content=output_json['chat'])
-    if 'cli_call' in output_json:
+
+        chatting_state = True
+    # if the LLM wants to run a cli call, then execute
+    elif 'cli_call' in output_json:
+        # define response here
         # print('cli_call')
         ai_executing_response = 'Here you go.'
         ai_message_prompt_ = AIMessage(content=ai_executing_response)
         print(f'{Fore.LIGHTCYAN_EX}{ai_executing_response}')
-        #TODO: Error Handling
-        subprocess.run(output_json['cli_call'].split(' '), )
-        # print("command_to_run: ", llm_output)
 
-    return ai_message_prompt_, True if 'chat' in output_json else False
+        # Execute comand
+        # TODO: Error Handling
+        subprocess.run(output_json['cli_call'].split(' '), )
+    else:
+        ai_executing_response = "Sorry I couldn't do that, please try again"
+        ai_message_prompt_ = AIMessage(content=ai_executing_response)
+
+    return ai_message_prompt_, chatting_state
 
 
 def llm_dj(music_request: str):
     acceptable_models = {'gpt-4', 'gpt-3.5-turbo'}
     model = 'gpt-4'
 
-    # setup LLM call
+    # setup LLM to handle request
+    temperature = 1
+    LLM = ChatOpenAI(model_name=model, max_tokens=2000, temperature=temperature)
     system_message = SPOTIFY_PROMPT
     system_message_prompt = SystemMessage(
         content=system_message)
 
     # get initial response
+    # unlike the standard chat scenario, we already have a human input, so we process the input first, before going into
+    # the chat loop.
     conversation = [system_message_prompt, HumanMessage(content=music_request)]
 
-    # [print(c.content) for c in conversation]
-
     output = llm_call(
-        LLM=ChatOpenAI(model_name=model, max_tokens=2000, temperature=0.5),
+        LLM=LLM,
         conversation=conversation
     )
 
@@ -116,22 +140,25 @@ def llm_dj(music_request: str):
     ai_message_prompt, chat = process_llm_output(llm_output=output)
     conversation.append(ai_message_prompt)
 
+    # if the LLM continues to chat, we can then go into a chat loop.
     human_input = ''
     while human_input != 'quit' and chat:
-        human_input = grab_user_input()
+        human_input = grab_user_input(User='MusicRequest: ')
 
         # check for escape keywords (bypasses llm call)
         if human_input.lower() == 'quit':
-            print('EXITING')
+            print('Exiting Spotify Chat')
             break
 
         human_message = HumanMessage(content=human_input)
         conversation.append(human_message)
 
+        # add system message to remind the model of its output format
+        # TODO: Explore alternatives to this
         conversation.append(SystemMessage(content='Remember to output JSON format.'))
 
         output = llm_call(
-            LLM=ChatOpenAI(model_name=model, max_tokens=2000, temperature=0.5),
+            LLM=LLM,
             conversation=conversation
         )
 

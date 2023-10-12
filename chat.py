@@ -47,6 +47,7 @@ def main(model: str = 'gpt-3.5-turbo', system_message: str = None):
 
         executed: bool = execute_human_tasks(human_input, conversation)
 
+        # if we executed a task lets skip the orchestrators chat flow
         if executed:
             continue
 

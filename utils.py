@@ -50,13 +50,13 @@ def llm_call(LLM, conversation):
     return output
 
 
-def grab_user_input() -> str:
+def grab_user_input(User:str = 'User') -> str:
     end_token = '//'  # /end
 
     grab_input = []
     while True:
         if not grab_input:
-            grab_input.append(input(f'{Fore.LIGHTMAGENTA_EX}{Back.BLACK}User: '))
+            grab_input.append(input(f'{Fore.LIGHTMAGENTA_EX}{Back.BLACK}{User}: '))
         else:
             grab_input.append(input(''))
 
