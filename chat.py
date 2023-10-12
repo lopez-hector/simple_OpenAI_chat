@@ -1,18 +1,16 @@
 from typing import List
 
 from langchain.chat_models import ChatOpenAI
-from langchain import PromptTemplate, LLMChain
 from langchain.prompts.chat import (
-    ChatPromptTemplate,
     SystemMessage,
-    AIMessagePromptTemplate,
     AIMessage,
     HumanMessage,
 )
 import argparse
-from utils import get_formatted_text
-import functools
-from colorama import Fore, Back, Style
+
+from spotify import llm_dj
+from utils import get_formatted_text, llm_call, grab_user_input
+from colorama import Fore
 import pyperclip
 
 
@@ -22,6 +20,9 @@ def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
         pyperclip.copy(text_to_copy)
         print(f'{Fore.RED}\n\tCopied to clipboard!')
         print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
+        return True
+    elif human_input[:7] == 'spotify':
+        llm_dj(music_request=human_input[7:])
         return True
     else:
         return False
@@ -45,6 +46,7 @@ def main(model: str = 'gpt-3.5-turbo', system_message: str = None):
         human_input = grab_user_input()
 
         executed: bool = execute_human_tasks(human_input, conversation)
+
         if executed:
             continue
 
@@ -59,7 +61,7 @@ def main(model: str = 'gpt-3.5-turbo', system_message: str = None):
 
         output = llm_call(LLM, conversation)
 
-        print('\n\t', get_formatted_text(output).replace('\n', '\n\t'))
+        print('  ', get_formatted_text(output).replace('\n', '\n  '))
 
         # LLM escape sequence (from prompt engineering)
         if output.lower().strip() == 'Have a nice day!!!'.lower():
@@ -69,38 +71,6 @@ def main(model: str = 'gpt-3.5-turbo', system_message: str = None):
         # update conversation history
         ai_message_prompt = AIMessage(content=output)
         conversation.append(ai_message_prompt)
-
-
-def llm_call(LLM, conversation):
-    chat_prompt = ChatPromptTemplate.from_messages(conversation)
-    # run as a chain
-    chain = LLMChain(llm=LLM, prompt=chat_prompt, )
-    output = chain.run(input_language="English")
-    return output
-
-
-def grab_user_input() -> str:
-    end_token = '//'  # /end
-
-    grab_input = []
-    while True:
-        if not grab_input:
-            grab_input.append(input(f'{Fore.LIGHTMAGENTA_EX}{Back.BLACK}User: '))
-        else:
-            grab_input.append(input(''))
-
-        # check for exit keywords
-        if grab_input[-1] == end_token:
-            grab_input.pop()
-            break
-        elif grab_input[-1][-len(end_token):] == end_token:
-            grab_input[-1] = grab_input[-1][:-len(end_token)]
-
-            break
-        elif grab_input[-1] == 'quit':
-            grab_input = ['quit']
-            break
-    return ''.join(grab_input)
 
 
 if __name__ == '__main__':
