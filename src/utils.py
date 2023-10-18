@@ -1,13 +1,17 @@
+from typing import List
+
+import pyperclip
 from langchain import LLMChain
 from langchain.prompts import ChatPromptTemplate
+from langchain.schema import AIMessage
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from colorama import Fore, Back, Style
-import openai
 
+from spotify import llm_dj
 
 def get_code_formatted(code, language):
     try:
@@ -72,3 +76,17 @@ def grab_user_input(User:str = 'User') -> str:
             grab_input = ['quit']
             break
     return ''.join(grab_input)
+
+
+def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
+    if human_input.lower() in ['copy', 'copy to clipboard']:
+        text_to_copy = conversation[-1].content
+        pyperclip.copy(text_to_copy)
+        print(f'{Fore.RED}\n\tCopied to clipboard!')
+        print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
+        return True
+    elif human_input[:7] == 'spotify':
+        llm_dj(music_request=human_input[7:])
+        return True
+    else:
+        return False

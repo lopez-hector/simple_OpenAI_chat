@@ -1,3 +1,13 @@
 openai
 langchain
 pygments
+
+coremltools~=7.0
+numpy~=1.26.0
+torch~=2.0.1
+diffusers~=0.21.2
+Pillow~=10.0.1
+setuptools~=58.1.0
+transformers~=4.29.2
+requests~=2.31.0
+tqdm~=4.66.1

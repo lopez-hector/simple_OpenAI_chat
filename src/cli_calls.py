@@ -76,7 +76,7 @@ class CliLlmCalls:
 
         """
         if '{' in llm_output:
-            if (llm_output[0] != '{' or llm_output[-1] != '}'):
+            if llm_output[0] != '{' or llm_output[-1] != '}':
                 llm_output = llm_output[llm_output.find('{'):llm_output.rfind('}')+1]
 
             if ':' in llm_output:
@@ -85,12 +85,7 @@ class CliLlmCalls:
         else:
             clean_llm_output = llm_output
 
-        if self.debug:
-            print('dirty')
-            print(llm_output)
-            print('clean')
-            print(clean_llm_output)
-        # the LLM doesnt always output the right format when chatting, so we can catch that error here
+        # the LLM doesn't always output the right format when chatting, so we can catch that error here
         try:
             output_json = eval(clean_llm_output)
         except:
@@ -107,19 +102,26 @@ class CliLlmCalls:
         elif 'cli_call' in output_json:
             # define response here
             print('cli_call')
-            ai_executing_response = 'Here you go.'
-            ai_message_prompt_ = AIMessage(content=ai_executing_response)
-            print(f'{Fore.LIGHTCYAN_EX}{ai_executing_response}')
 
             # Execute comand
             # TODO: Error Handling
-            if not self.debug:
-                subprocess.run(output_json['cli_call'].split(' '), )
-            else:
-                print(output_json['cli_call'].split(' '))
-            self.state = 'execute_cli_call'
+            ai_message_prompt_ = self.cli_call(output_json['cli_call'])
         else:
             ai_executing_response = "Sorry I couldn't do that, please try again"
             ai_message_prompt_ = AIMessage(content=ai_executing_response)
 
         return ai_message_prompt_
+
+    def cli_call(self, cli_call):
+        self.state = 'execute_cli_call'
+
+        ai_executing_response = 'Here you go.'
+        ai_message_prompt = AIMessage(content=ai_executing_response)
+        print(f'{Fore.LIGHTCYAN_EX}{ai_executing_response}')
+
+        if not self.debug:
+            subprocess.run(cli_call.split(' '), )
+        else:
+            print(cli_call)
+
+        return ai_message_prompt
