@@ -1,3 +1,7 @@
 .idea/
 myenv/
 __pycache__/*
+img/
+archive
+.DS_Store
+*.npy
