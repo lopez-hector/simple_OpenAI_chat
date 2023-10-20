@@ -5,3 +5,4 @@ img/
 archive
 .DS_Store
 *.npy
+*/__pycache__

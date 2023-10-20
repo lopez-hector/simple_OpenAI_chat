@@ -2,6 +2,7 @@ import argparse
 import configparser
 import subprocess
 from pathlib import Path
+from typing import Dict
 
 from langchain.prompts.chat import (
     AIMessage,
@@ -9,21 +10,6 @@ from langchain.prompts.chat import (
 
 from colorama import Fore
 from cli_calls import CliLlmCalls
-
-# Create a configuration object
-config = configparser.ConfigParser()
-
-# Read the configuration file
-config.read('sd-xl-config.ini')
-
-# Get the values from the configuration file
-resources_directory = config.get('Paths', 'resources_directory')
-output_save_directory = config.get('Paths', 'output_save_directory')
-python_script_directory = config.get('Paths', 'python_script_directory')
-
-# Use the values in your script
-print(f"Resources Directory: {resources_directory}")
-print(f"Output Save Directory: {output_save_directory}")
 
 # use shpotify to cli control spotify
 cli_docs = f"""
@@ -49,7 +35,7 @@ Tips for good prompts:
 Be detailed and specific when describing the subject.Use multiple brackets () to increase its strength and [] to reduce. Use an appropriate medium type consistent with the artist. E.g. photograph should not be used with van Gogh.The artist’s name is a very strong style modifier. Use wisely. Experiment with blending styles.
 
 Example call:
-python pipeline.py --prompt <prompt> --negative-prompt <negative_prompt> --guidance-scale 7.5 --num-inference-steps 25 --seed 23
+python pipeline.py --prompt <prompt> --negative-prompt <negative_prompt> --guidance-scale 7.5 --num-inference-steps 25 --seed 5893757
 
 Acceptable CLI args:
 
@@ -89,39 +75,44 @@ RETURN JSON
 {RECURRING_PROMPT}"""
 
 
-def prepare_strings_for_subprocess(command_list):
-    parsed_command = []
-    i = 0
-    while i < len(command_list):
-        if command_list[i].startswith(("'", '"')):
-            quote_char = command_list[i][0]
-            parsed_arg = command_list[i][1:]
-            i += 1
-            while i < len(command_list) and not command_list[i].endswith(quote_char):
-                parsed_arg += ' ' + command_list[i]
-                i += 1
-            parsed_arg += ' ' + command_list[i][:-1]
-            parsed_command.append(parsed_arg)
-        else:
-            parsed_command.append(command_list[i])
-        i += 1
-    return parsed_command
+def get_config():
+    # Create a configuration object
+    config = configparser.ConfigParser()
+
+    # Read the configuration file
+    config.read('/Users/hectorlopezhernandez/PycharmProjects/chat/sd-xl-config.ini')
+
+    # Get the values from the configuration file
+    resources_directory = config.get('Paths', 'resources_directory')
+    output_save_directory = config.get('Paths', 'output_save_directory')
+    python_script_directory = config.get('Paths', 'python_script_directory')
+
+    # Use the values in your script
+    print(f"Resources Directory: {resources_directory}")
+    print(f"Output Save Directory: {output_save_directory}")
+
+    print(type(config))
+
+    config = dict(resources_directory=resources_directory, output_save_directory=output_save_directory)
+
+    return config
 
 
 class SdxlCliLlmCalls(CliLlmCalls):
     def cli_call(self, cli_call: str):
         self.state = 'chat'  # continue chatting even after executing this
 
+        config: Dict = get_config()
+
         default_args = {
             '--model-version': 'stabilityai/stable-diffusion-xl-base-1.0',
             '--compute-unit': 'CPU_AND_GPU',
-            '-i': resources_directory,
-            '-o': output_save_directory
+            '-i': config['resources_directory'],
+            '-o': config['output_save_directory']
         }
 
-        command_list = cli_call.strip().split(' ')
-
-        parsed_command = prepare_strings_for_subprocess(command_list)
+        import shlex
+        parsed_command = shlex.split(cli_call)
 
         parsed_command.extend([split for kv in default_args.items() for split in kv])
         command_list = parsed_command[1:]
@@ -189,6 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('-r',
                         "--request",
                         type=str,
+                        required=True,
                         help="User Request")
 
     args = parser.parse_args()
