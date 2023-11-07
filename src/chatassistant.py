@@ -10,7 +10,7 @@ from langchain.prompts.chat import (
 from typing import List, Union
 
 from spotify import llm_dj
-from sdxl import llm_sdxl
+from sdxl import llm_sdxl_chat
 from utils import get_formatted_text, grab_user_input, llm_call
 
 
@@ -37,7 +37,7 @@ class ChatAssistant:
             llm_dj(music_request=human_input[7:])
             return True
         elif human_input[:4] == 'sdxl':
-            llm_sdxl(img_request=human_input[4:], debug=False)
+            llm_sdxl_chat(img_request=human_input[4:], debug=False)
             return True
         else:
             return False

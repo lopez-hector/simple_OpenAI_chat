@@ -39,7 +39,7 @@ python pipeline.py --prompt <prompt> --negative-prompt <negative_prompt> --guida
 
 Acceptable CLI args:
 
---prompt <prompt>: prompt to generate an image of the object and in the style that you'd like
+--prompt <prompt>: prompt to generate an image of the object and in the style that you'd like in double quotes
 --negative-prompt <negative_prompt>: negative prompt for image generation.
 --guidance-scale <guidance-scale>: default to 7.5 but if the user want something very aligned go up to ten.
 --num-inference-steps <num_inference_steps>: number of steps for image generation, default to {25}
@@ -88,10 +88,8 @@ def get_config():
     python_script_directory = config.get('Paths', 'python_script_directory')
 
     # Use the values in your script
-    print(f"Resources Directory: {resources_directory}")
-    print(f"Output Save Directory: {output_save_directory}")
-
-    print(type(config))
+    print(f"Model Source: {resources_directory.split('/')[-1]}")
+    print(f"Img Dir.: {output_save_directory.split('/')[-1]}")
 
     config = dict(resources_directory=resources_directory, output_save_directory=output_save_directory)
 
@@ -118,14 +116,12 @@ class SdxlCliLlmCalls(CliLlmCalls):
         command_list = parsed_command[1:]
 
         # Formulate ai response
-        ai_executing_response = f'''Running:\n```{cli_call}```'''
+        ai_executing_response = f'''Making your image: {cli_call[cli_call.find('--prompt') + 10:]}'''
 
         ai_message_prompt = AIMessage(content=ai_executing_response)
         print(f'{Fore.LIGHTCYAN_EX}{ai_executing_response}')
 
         if not self.debug:
-            print('\nList')
-            print(command_list)
             try:
                 subprocess.run(command_list, )
                 from PIL import Image
@@ -161,7 +157,8 @@ class SdxlCliLlmCalls(CliLlmCalls):
         return ai_message_prompt
 
 
-def llm_sdxl(img_request: str, debug=False):
+def llm_sdxl_chat(img_request, debug=False):
+
     sdxl_agent = SdxlCliLlmCalls(
         agent_name='SDXL',
         user_name='ImageRequest',
@@ -169,8 +166,7 @@ def llm_sdxl(img_request: str, debug=False):
         debug=debug
     )
 
-    sdxl_agent.chat(initial_message=img_request)
-
+    sdxl_agent.chat(img_request)
 
 if __name__ == '__main__':
     # get user question
@@ -183,6 +179,26 @@ if __name__ == '__main__':
                         required=True,
                         help="User Request")
 
+    parser.add_argument(
+        '-n',
+        "--no-chat",
+        action='store_true'
+    )
+
     args = parser.parse_args()
 
-    llm_sdxl(img_request=args.request, debug=False)
+    debug = False
+
+    sdxl_agent = SdxlCliLlmCalls(
+        agent_name='SDXL',
+        user_name='ImageRequest',
+        orienting_system_message=SDXL_PROMPT,
+        debug=debug
+    )
+    print(args.no_chat)
+
+    if args.no_chat:
+        sdxl_agent.cli_call(cli_call=args.request)
+    else:
+        sdxl_agent.chat(initial_message=args.request)
+
