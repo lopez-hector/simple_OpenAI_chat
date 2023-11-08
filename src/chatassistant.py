@@ -23,7 +23,7 @@ ToolCall: TypeAlias = Dict[str, str, FunctionCalled]  # id, type, function the m
 class OpenAIFormat:
     role: str
     content: str
-    tool_calls: Optional[ToolCall]
+    tool_calls: ToolCall | None = None
 
 
 Conversation: TypeAlias = List[OpenAIFormat]
@@ -37,13 +37,13 @@ class ChatAssistant:
     ):
 
         self.LLM = LLM
-        self.system_message_prompt = orienting_message
-        self.conversation: Conversation = [{'role': 'system', 'content': orienting_message}]
+        self.system_message_prompt: str = orienting_message
+        self.conversation: Conversation = [OpenAIFormat(role='system', content=orienting_message)]
 
     @staticmethod
-    def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
+    def execute_human_tasks(human_input: str, conversation: Conversation):
         if human_input.lower() in ['copy', 'copy to clipboard']:
-            text_to_copy = conversation[-1]['content']
+            text_to_copy = conversation[-1].content
             pyperclip.copy(text_to_copy)
             print(f'{Fore.RED}\n\tCopied to clipboard!')
             print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
@@ -68,7 +68,8 @@ class ChatAssistant:
             if human_input.lower() == 'quit':
                 print('EXITING')
                 break
-            human_message_prompt = HumanMessage(content=human_input)
+
+            human_message_prompt = OpenAIFormat(role='user', content=human_input)
 
             self.conversation.append(human_message_prompt)
 

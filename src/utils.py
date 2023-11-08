@@ -51,9 +51,9 @@ def llm_call(LLM, conversation):
     # Unpack Langchain Conversation into openai call
     openai_spec_conversation = []
     for c in conversation:
-        match c:
-            case AIMessage:
-                openai_spec_conversation.append({'role': 'assistant', 'content'})
+        match c.role:
+            case 'user':
+                
 
     # add extra steps if needed
     from pprint import pprint
