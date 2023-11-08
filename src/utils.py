@@ -47,11 +47,20 @@ def get_formatted_text(input):
 
 
 def llm_call(LLM, conversation):
-    chat_prompt = ChatPromptTemplate.from_messages(conversation)
-    # run as a chain
-    chain = LLMChain(llm=LLM, prompt=chat_prompt, )
-    output = chain.run(input_language="English")
-    return output
+
+    # Unpack Langchain Conversation into openai call
+    openai_spec_conversation = []
+    for c in conversation:
+        match c:
+            case AIMessage:
+                openai_spec_conversation.append({'role': 'assistant', 'content'})
+
+    # add extra steps if needed
+    from pprint import pprint
+    print(type(conversation))
+    pprint(vars(conversation[0]))
+    pprint(LLM(conversation))
+    return LLM(conversation).content
 
 
 def grab_user_input(User:str = 'User') -> str:

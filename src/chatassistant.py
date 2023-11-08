@@ -1,3 +1,5 @@
+import dataclasses
+
 import pyperclip
 from colorama import Fore
 from langchain.chat_models import ChatOpenAI
@@ -7,11 +9,24 @@ from langchain.prompts.chat import (
     HumanMessage,
 )
 
-from typing import List, Union
+from typing import List, Union, Dict, TypeAlias, Optional
 
 from spotify import llm_dj
 from sdxl import llm_sdxl_chat
 from utils import get_formatted_text, grab_user_input, llm_call
+
+FunctionCalled: TypeAlias = Dict[str, str]  # name, arguments
+ToolCall: TypeAlias = Dict[str, str, FunctionCalled]  # id, type, function the model called
+
+
+@dataclasses.dataclass
+class OpenAIFormat:
+    role: str
+    content: str
+    tool_calls: Optional[ToolCall]
+
+
+Conversation: TypeAlias = List[OpenAIFormat]
 
 
 class ChatAssistant:
@@ -22,13 +37,13 @@ class ChatAssistant:
     ):
 
         self.LLM = LLM
-        self.system_message_prompt = SystemMessage(content=orienting_message)
-        self.conversation: List[Union[AIMessage, SystemMessage, HumanMessage]] = [self.system_message_prompt]
+        self.system_message_prompt = orienting_message
+        self.conversation: Conversation = [{'role': 'system', 'content': orienting_message}]
 
     @staticmethod
     def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
         if human_input.lower() in ['copy', 'copy to clipboard']:
-            text_to_copy = conversation[-1].content
+            text_to_copy = conversation[-1]['content']
             pyperclip.copy(text_to_copy)
             print(f'{Fore.RED}\n\tCopied to clipboard!')
             print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
