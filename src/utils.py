@@ -51,7 +51,7 @@ def get_formatted_text(input):
     return ''.join(split_text)
 
 
-def llm_call(LLM, conversation):
+def llm_call(conversation):
 
     openai_spec_conversation = []
     for c in conversation:

@@ -30,7 +30,7 @@ class OpenAIFormat:
 Conversation: TypeAlias = List[OpenAIFormat]
 
 
-class ChatAssistant:
+class ChatAssistant__:
     def __init__(
             self,
             orienting_message: str,
@@ -86,3 +86,5 @@ class ChatAssistant:
                 break
 
             self.conversation.append(OpenAIFormat(**output.dict()))
+
+
