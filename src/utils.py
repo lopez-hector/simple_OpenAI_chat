@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import List
 
 import pyperclip
@@ -11,7 +12,11 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from colorama import Fore, Back, Style
 
+from openai import OpenAI
+client = OpenAI()
+
 from spotify import llm_dj
+
 
 def get_code_formatted(code, language):
     try:
@@ -48,22 +53,22 @@ def get_formatted_text(input):
 
 def llm_call(LLM, conversation):
 
-    # Unpack Langchain Conversation into openai call
     openai_spec_conversation = []
     for c in conversation:
-        match c.role:
-            case 'user':
-                
+        openai_spec_conversation.append({k: v for k, v in asdict(c).items() if v is not None})
 
-    # add extra steps if needed
-    from pprint import pprint
-    print(type(conversation))
-    pprint(vars(conversation[0]))
-    pprint(LLM(conversation))
-    return LLM(conversation).content
+    # call openai LLM
+    response = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=openai_spec_conversation,
+        # tools=None,
+        # tool_choice="auto",  # auto is default, but we'll be explicit
+    )
+
+    return response
 
 
-def grab_user_input(User:str = 'User') -> str:
+def grab_user_input(User: str = 'User') -> str:
     end_token = '//'  # /end
 
     grab_input = []

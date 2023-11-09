@@ -16,7 +16,7 @@ from sdxl import llm_sdxl_chat
 from utils import get_formatted_text, grab_user_input, llm_call
 
 FunctionCalled: TypeAlias = Dict[str, str]  # name, arguments
-ToolCall: TypeAlias = Dict[str, str, FunctionCalled]  # id, type, function the model called
+ToolCall: TypeAlias = Dict[str, str | FunctionCalled]  # id, type, function the model called
 
 
 @dataclasses.dataclass
@@ -24,6 +24,7 @@ class OpenAIFormat:
     role: str
     content: str
     tool_calls: ToolCall | None = None
+    function_call: ToolCall | None = None
 
 
 Conversation: TypeAlias = List[OpenAIFormat]
@@ -73,10 +74,15 @@ class ChatAssistant:
 
             self.conversation.append(human_message_prompt)
 
-            output = llm_call(self.LLM, self.conversation)
-            print('  ', get_formatted_text(output).replace('\n', '\n  '))
-            if output.lower().strip() == 'Have a nice day!!!'.lower():
+            llm_response = llm_call(self.LLM, self.conversation)
+            output = llm_response.choices[0].message
+            response = output.content
+            tool_calls = output.tool_calls
+            #TODO Tool calls
+
+            print('  ', get_formatted_text(response).replace('\n', '\n  '))
+            if response.lower().strip() == 'Have a nice day!!!'.lower():
                 print('EXITING')
                 break
-            ai_message_prompt = AIMessage(content=output)
-            self.conversation.append(ai_message_prompt)
+
+            self.conversation.append(OpenAIFormat(**output.dict()))
