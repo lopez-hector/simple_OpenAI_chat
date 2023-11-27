@@ -1,5 +1,6 @@
 import argparse
 
+
 # use shpotify to cli control spotify
 cli_docs = """
 spotify play                       Resumes playback where Spotify last left off.
@@ -63,13 +64,15 @@ RETURN JSON
 {RECURRING_PROMPT}"""
 
 
-def llm_dj(music_request: str):
-    from cli_calls import CliLlmCalls
+def llm_dj(music_request: str, debug=False):
+    from generalchatassistant import GeneralChatAssistant
 
-    spotify_cli_agent = CliLlmCalls(
+    spotify_cli_agent = GeneralChatAssistant(
         agent_name='Spotify',
         user_name='MusicRequest',
-        orienting_system_message=SPOTIFY_PROMPT
+        orienting_system_message=SPOTIFY_PROMPT,
+        return_json=True,
+        debug=debug
     )
     spotify_cli_agent.chat(initial_message=music_request)
 

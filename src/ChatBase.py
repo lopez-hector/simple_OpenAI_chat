@@ -1,45 +1,33 @@
 import dataclasses
 import subprocess
-from typing import TypeAlias, List, Dict
-import pyperclip
+from typing import List
 
-from sdxl import llm_sdxl_chat
-from spotify import llm_dj
-from utils import llm_call, get_formatted_text, grab_user_input
+from utils import OpenAIFormat
+from utils import get_formatted_text, grab_user_input
 from colorama import Fore
 
 from openai import OpenAI
-from openai.types.chat.chat_completion import  ChatCompletionMessage
+from openai.types.chat.chat_completion import ChatCompletionMessage
 from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
+import abc
 
 client = OpenAI()
 
-FunctionCalled: TypeAlias = Dict[str, str]  # name, arguments
-ToolCall: TypeAlias = Dict[str, str | FunctionCalled]  # id, type, function the model called
 
-
-@dataclasses.dataclass
-class OpenAIFormat:
-    role: str
-    content: str
-    tool_calls: ToolCall | None = None
-
-
-Conversation: TypeAlias = List[OpenAIFormat]
-
-
-class CliLlmCalls:
+class ChatBase:
     def __init__(self,
                  agent_name: str,
                  orienting_system_message,
                  user_name: str = 'User',
                  model='gpt-4-1106-preview',
+                 return_json: bool = False,
                  max_tokens=2000,
                  temperature=1,
                  debug=False
                  ):
 
         self.model = model
+        self.return_json = return_json
 
         # this will orient the cli assistant to help you create the correct cli arguments
         self.system_message = OpenAIFormat(role='system', content=orienting_system_message)
@@ -56,7 +44,8 @@ class CliLlmCalls:
             self.state = 'chat'
             self.conversation.append(OpenAIFormat(role='user', content=initial_message))
             llm_response = self.llm_call()
-            response = self.process_llm_output(llm_message=llm_response.message)
+            message: ChatCompletionMessage = llm_response.choices[0].message
+            response = self.process_llm_output(llm_message=message)
             self.conversation.append(response)
 
         # continue chatting until a cli command is executed
@@ -64,9 +53,10 @@ class CliLlmCalls:
         while human_input != 'quit' and self.state == 'chat':
             # human response
             human_input = grab_user_input(User=f'{self.user_name}')
-            executed: bool = self.execute_human_tasks(human_input, self.conversation)
 
+            executed: bool = self.divert_execution(human_input)
             if executed:
+                print(self.state, human_input)
                 continue
 
             if human_input.lower() == 'quit':
@@ -79,13 +69,16 @@ class CliLlmCalls:
 
             llm_response = self.llm_call()
             message: ChatCompletionMessage = llm_response.choices[0].message
-
+            # print('MESSAGE')
+            # print(message)
             response: OpenAIFormat = self.process_llm_output(llm_message=message)
 
             if response.content.lower().strip() == 'Have a nice day!!!'.lower():
                 break
 
             self.conversation.append(response)
+            # print('DEBUG')
+            # [print(c.role, '\t', c.content) for c in self.conversation]
 
         print('EXITING')
 
@@ -102,25 +95,18 @@ class CliLlmCalls:
         """
         message_content = llm_message.content
 
+        if self.debug:
+            print('AI RESPONSE')
+            print(message_content)
         # TODO Tool calls
         tool_calls: List[ChatCompletionMessageToolCall] | None = llm_message.tool_calls
 
-        # Hacky way to extract poorly formatted json output from models
-        if '{' in message_content:
-            if message_content[0] != '{' or message_content[-1] != '}':
-                message_content = message_content[message_content.find('{'):message_content.rfind('}') + 1]
-
-            if ':' in message_content:
-                first_colon_idx = message_content.find(':')
-                clean_llm_output = message_content[:first_colon_idx + 1] + message_content[first_colon_idx + 1:].replace(':', '-')
-        else:
-            clean_llm_output = message_content
 
         # the LLM doesn't always output JSON when chatting, so we can catch that error here
         try:
-            output_json = eval(clean_llm_output)
+            output_json = eval(message_content)
         except:
-            output_json = {'chat': clean_llm_output}
+            output_json = {'chat': message_content}
 
         # if the LLM wants to chat, continue the conversation
         if 'chat' in output_json:
@@ -150,11 +136,16 @@ class CliLlmCalls:
         for c in conversation:
             openai_spec_conversation.append({k: v for k, v in dataclasses.asdict(c).items() if v is not None})
 
+        llm_args = {
+            'model': self.model,
+            'messages': openai_spec_conversation
+        }
+
+        if self.return_json:
+            llm_args = llm_args | dict(response_format={"type": "json_object"})
         # call openai LLM
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            messages=openai_spec_conversation,
-            response_format={"type": "json_object"},
+            **llm_args,
             # tools=None,
             # tool_choice="auto",  # auto is default, but we'll be explicit
         )
@@ -175,19 +166,15 @@ class CliLlmCalls:
 
         return ai_message_prompt
 
-    @staticmethod
-    def execute_human_tasks(human_input: str, conversation: Conversation):
-        if human_input.lower() in ['copy', 'copy to clipboard']:
-            text_to_copy = conversation[-1].content
-            pyperclip.copy(text_to_copy)
-            print(f'{Fore.RED}\n\tCopied to clipboard!')
-            print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
-            return True
-        elif human_input[:7] == 'spotify':
-            llm_dj(music_request=human_input[7:])
-            return True
-        elif human_input[:4] == 'sdxl':
-            llm_sdxl_chat(img_request=human_input[4:], debug=False)
-            return True
-        else:
-            return False
+    @abc.abstractmethod
+    def divert_execution(self, human_input: str) -> bool:
+        """
+        Take actions on human input before language model.
+        e.g.
+            1. Route to different models
+            3. copy text to clipboard
+
+        :param human_input:
+        :return: if something was executed or not
+        """
+        raise NotImplemented

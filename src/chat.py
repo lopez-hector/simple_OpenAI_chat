@@ -1,4 +1,4 @@
-from cli_calls import CliLlmCalls
+from generalchatassistant import GeneralChatAssistant
 import argparse
 
 DEFAULT_SYSTEM_MESSAGE = "I'm a helpful assistant. If the user has no further questions or the conversation has clearly ended I will expcitly return the phrase: ```Have a nice day!!!``` without any added text."
@@ -6,11 +6,12 @@ DEFAULT_SYSTEM_MESSAGE = "I'm a helpful assistant. If the user has no further qu
 
 def main(model_name, system_message):
 
-    chat_assistant = CliLlmCalls(
+    chat_assistant = GeneralChatAssistant(
         agent_name='Assistant',
         orienting_system_message=system_message,
         model=model_name,
         temperature=1,
+        debug=False
     )
 
     chat_assistant.chat()
@@ -18,12 +19,13 @@ def main(model_name, system_message):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Open AI chat")
+    acceptable_models = {'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-4-1106-preview'}
 
     # Add the model_name argument
     parser.add_argument('-m',
                         "--model_name",
                         type=str,
-                        help="Name of the model")
+                        help=f"Name of the model. {acceptable_models}")
     parser.add_argument('-s',
                         "--system_message",
                         type=str,
@@ -31,7 +33,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    acceptable_models = {'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-4-1106-preview'}
 
     if args.model_name is None:
         print('defaulting to chat-gpt (gpt-3.5-turbo-1106)')

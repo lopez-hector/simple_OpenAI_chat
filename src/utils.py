@@ -1,9 +1,8 @@
+import dataclasses
 from dataclasses import asdict
-from typing import List
+from typing import List, TypeAlias, Dict
 
 import pyperclip
-from langchain import LLMChain
-from langchain.prompts import ChatPromptTemplate
 from langchain.schema import AIMessage
 from pygments import highlight
 from pygments.lexers import PythonLexer
@@ -13,9 +12,8 @@ from pygments.lexers import get_lexer_by_name
 from colorama import Fore, Back, Style
 
 from openai import OpenAI
-client = OpenAI()
 
-from spotify import llm_dj
+client = OpenAI()
 
 
 def get_code_formatted(code, language):
@@ -52,7 +50,6 @@ def get_formatted_text(input):
 
 
 def llm_call(conversation):
-
     openai_spec_conversation = []
     for c in conversation:
         openai_spec_conversation.append({k: v for k, v in asdict(c).items() if v is not None})
@@ -92,15 +89,15 @@ def grab_user_input(User: str = 'User') -> str:
     return ''.join(grab_input)
 
 
-def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
-    if human_input.lower() in ['copy', 'copy to clipboard']:
-        text_to_copy = conversation[-1].content
-        pyperclip.copy(text_to_copy)
-        print(f'{Fore.RED}\n\tCopied to clipboard!')
-        print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
-        return True
-    elif human_input[:7] == 'spotify':
-        llm_dj(music_request=human_input[7:])
-        return True
-    else:
-        return False
+FunctionCalled: TypeAlias = Dict[str, str]  # name, arguments
+ToolCall: TypeAlias = Dict[str, str | FunctionCalled]  # id, type, function the model called
+
+
+@dataclasses.dataclass
+class OpenAIFormat:
+    role: str
+    content: str
+    tool_calls: ToolCall | None = None
+
+
+Conversation: TypeAlias = List[OpenAIFormat]
