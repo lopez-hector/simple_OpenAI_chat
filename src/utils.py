@@ -1,8 +1,8 @@
-from typing import List
+import dataclasses
+from dataclasses import asdict
+from typing import List, TypeAlias, Dict
 
 import pyperclip
-from langchain import LLMChain
-from langchain.prompts import ChatPromptTemplate
 from langchain.schema import AIMessage
 from pygments import highlight
 from pygments.lexers import PythonLexer
@@ -11,7 +11,10 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from colorama import Fore, Back, Style
 
-from spotify import llm_dj
+from openai import OpenAI
+
+client = OpenAI()
+
 
 def get_code_formatted(code, language):
     try:
@@ -46,15 +49,23 @@ def get_formatted_text(input):
     return ''.join(split_text)
 
 
-def llm_call(LLM, conversation):
-    chat_prompt = ChatPromptTemplate.from_messages(conversation)
-    # run as a chain
-    chain = LLMChain(llm=LLM, prompt=chat_prompt, )
-    output = chain.run(input_language="English")
-    return output
+def llm_call(conversation):
+    openai_spec_conversation = []
+    for c in conversation:
+        openai_spec_conversation.append({k: v for k, v in asdict(c).items() if v is not None})
+
+    # call openai LLM
+    response = client.chat.completions.create(
+        model="gpt-4-1106-preview",
+        messages=openai_spec_conversation,
+        # tools=None,
+        # tool_choice="auto",  # auto is default, but we'll be explicit
+    )
+
+    return response
 
 
-def grab_user_input(User:str = 'User') -> str:
+def grab_user_input(User: str = 'User') -> str:
     end_token = '//'  # /end
 
     grab_input = []
@@ -78,15 +89,15 @@ def grab_user_input(User:str = 'User') -> str:
     return ''.join(grab_input)
 
 
-def execute_human_tasks(human_input: str, conversation: List[AIMessage]):
-    if human_input.lower() in ['copy', 'copy to clipboard']:
-        text_to_copy = conversation[-1].content
-        pyperclip.copy(text_to_copy)
-        print(f'{Fore.RED}\n\tCopied to clipboard!')
-        print(f'Text Copied: {text_to_copy[:20]} ... {text_to_copy[-20:]}')
-        return True
-    elif human_input[:7] == 'spotify':
-        llm_dj(music_request=human_input[7:])
-        return True
-    else:
-        return False
+FunctionCalled: TypeAlias = Dict[str, str]  # name, arguments
+ToolCall: TypeAlias = Dict[str, str | FunctionCalled]  # id, type, function the model called
+
+
+@dataclasses.dataclass
+class OpenAIFormat:
+    role: str
+    content: str
+    tool_calls: ToolCall | None = None
+
+
+Conversation: TypeAlias = List[OpenAIFormat]

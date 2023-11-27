@@ -4,12 +4,9 @@ import subprocess
 from pathlib import Path
 from typing import Dict
 
-from langchain.prompts.chat import (
-    AIMessage,
-)
-
 from colorama import Fore
-from cli_calls import CliLlmCalls
+from chatbase import ChatBase
+from utils import OpenAIFormat
 
 # use shpotify to cli control spotify
 cli_docs = f"""
@@ -35,7 +32,7 @@ Tips for good prompts:
 Be detailed and specific when describing the subject.Use multiple brackets () to increase its strength and [] to reduce. Use an appropriate medium type consistent with the artist. E.g. photograph should not be used with van Gogh.The artist’s name is a very strong style modifier. Use wisely. Experiment with blending styles.
 
 Example call:
-python pipeline.py --prompt <prompt> --negative-prompt <negative_prompt> --guidance-scale 7.5 --num-inference-steps 25 --seed 5893757
+python sdxl_pipeline.py --prompt <prompt> --negative-prompt <negative_prompt> --guidance-scale 7.5 --num-inference-steps 25 --seed 5893757
 
 Acceptable CLI args:
 
@@ -80,7 +77,7 @@ def get_config():
     config = configparser.ConfigParser()
 
     # Read the configuration file
-    config.read('/Users/hectorlopezhernandez/PycharmProjects/chat/sd-xl-config.ini')
+    config.read('/Users/hectorlopezhernandez/PycharmProjects/chat/src/sdxl_pipeline/sd-xl-config.ini')
 
     # Get the values from the configuration file
     resources_directory = config.get('Paths', 'resources_directory')
@@ -96,7 +93,7 @@ def get_config():
     return config
 
 
-class SdxlCliLlmCalls(CliLlmCalls):
+class SDXLChat(ChatBase):
     def cli_call(self, cli_call: str):
         self.state = 'chat'  # continue chatting even after executing this
 
@@ -118,7 +115,7 @@ class SdxlCliLlmCalls(CliLlmCalls):
         # Formulate ai response
         ai_executing_response = f'''Making your image: {cli_call[cli_call.find('--prompt') + 10:]}'''
 
-        ai_message_prompt = AIMessage(content=ai_executing_response)
+        ai_message_prompt = OpenAIFormat(role='assistant', content=ai_executing_response)
         print(f'{Fore.LIGHTCYAN_EX}{ai_executing_response}')
 
         if not self.debug:
@@ -156,17 +153,21 @@ class SdxlCliLlmCalls(CliLlmCalls):
 
         return ai_message_prompt
 
+    def divert_execution(self, human_input: str):
+        return False
+
 
 def llm_sdxl_chat(img_request, debug=False):
-
-    sdxl_agent = SdxlCliLlmCalls(
+    sdxl_agent = SDXLChat(
         agent_name='SDXL',
         user_name='ImageRequest',
         orienting_system_message=SDXL_PROMPT,
-        debug=debug
+        debug=debug,
+        return_json=True
     )
 
     sdxl_agent.chat(img_request)
+
 
 if __name__ == '__main__':
     # get user question
@@ -189,7 +190,7 @@ if __name__ == '__main__':
 
     debug = False
 
-    sdxl_agent = SdxlCliLlmCalls(
+    sdxl_agent = SDXLChat(
         agent_name='SDXL',
         user_name='ImageRequest',
         orienting_system_message=SDXL_PROMPT,
@@ -201,4 +202,3 @@ if __name__ == '__main__':
         sdxl_agent.cli_call(cli_call=args.request)
     else:
         sdxl_agent.chat(initial_message=args.request)
-

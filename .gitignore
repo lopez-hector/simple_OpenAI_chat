@@ -5,4 +5,5 @@ img/
 archive
 .DS_Store
 *.npy
-*/__pycache__
+**/__pycache__
+.ipynb_checkpoints/
