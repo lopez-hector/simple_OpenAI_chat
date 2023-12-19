@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict
 
 from colorama import Fore
-from chatbase import ChatBase
+from ChatBase import ChatBase
 from utils import OpenAIFormat
 
 # use shpotify to cli control spotify
