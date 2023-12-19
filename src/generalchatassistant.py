@@ -6,7 +6,7 @@ from colorama import Fore
 
 from openai import OpenAI
 
-from chatbase import ChatBase
+from ChatBase import ChatBase
 from arbitrary_cli_assistant import llm_cli_assistant
 
 client = OpenAI()
